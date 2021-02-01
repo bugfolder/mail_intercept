@@ -1,0 +1,42 @@
+<?php
+/**
+ * @file
+ * Intercept sent emails and display their contents, either via dpm() if available or
+ * as a status message if not.
+ */
+
+
+/**
+ * Implements hook_module_implements_alter().
+ *
+ * Move our hook to the end of the list so that the message is fully constructed
+ * by everyone else (e.g., attachments added) before we see it.
+ */
+function mail_intercept_module_implements_alter(&$implementations, $hook) {
+  if ($hook == 'mail_alter') {
+    $group = $implementations['mail_intercept'];
+    unset($implementations['mail_intercept']);
+    $implementations['mail_intercept'] = $group;
+  }
+}
+
+
+/**
+ * Implements hook_mail_alter().
+ *
+ * Send the email to the screen instead of trying to send it externally.
+ */
+function mail_intercept_mail_alter(&$message) {
+  if (module_exists('devel')) {
+    dpm($message, 'email message');
+  }
+  else {
+    backdrop_set_message(t('Outgoing mail is disabled. This email message would have been sent: <ul><li>from => @from</li><li>to => @to</li><li>subject => @subject</li></ul>',
+      array(
+      '@from' => $message['from'],
+      '@to' => $message['to'],
+      '@subject' => $message['subject'],
+    )));
+  }
+  $message['send'] = FALSE;
+}

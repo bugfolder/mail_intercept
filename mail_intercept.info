@@ -1,0 +1,6 @@
+name = Mail Intercept
+description = Intercept outbound emails and display them on the screen.
+package = Development
+backdrop = 1.x
+type = module
+version = 7.x-1.0
