@@ -7,6 +7,33 @@
 
 
 /**
+ * Implements hook_menu().
+ */
+function mail_intercept_menu() {
+  $items['admin/config/development/mail_intercept'] = array(
+    'title' => 'Mail intercept',
+    'description' => 'Settings for intercepting Backdrop emails.',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('mail_intercept_settings_form'),
+    'file' => 'mail_intercept.admin.inc',
+    'access arguments' => array('administer site configuration'),
+  );
+  return $items;
+}
+
+
+/**
+ * Implements hook_config_info().
+ */
+function mail_intercept_config_info() {
+  $prefixes['mail_intercept.settings'] = array(
+    'label' => t('Mail Intercept settings'),
+    'group' => t('Configuration'),
+  );
+}
+
+
+/**
  * Implements hook_module_implements_alter().
  *
  * Move our hook to the end of the list so that the message is fully constructed
@@ -27,16 +54,33 @@ function mail_intercept_module_implements_alter(&$implementations, $hook) {
  * Send the email to the screen instead of trying to send it externally.
  */
 function mail_intercept_mail_alter(&$message) {
-  if (module_exists('devel')) {
-    dpm($message, 'email message');
-  }
-  else {
-    backdrop_set_message(t('Outgoing mail is disabled. This email message would have been sent: <ul><li>from => @from</li><li>to => @to</li><li>subject => @subject</li></ul>',
-      array(
-      '@from' => $message['from'],
-      '@to' => $message['to'],
-      '@subject' => $message['subject'],
-    )));
+
+  $handler = config_get('mail_intercept.settings', 'mail_intercept_handler');
+  switch ($handler) {
+    case 1: // Write to screen
+      if (module_exists('devel')) {
+        dpm($message, 'Backdrop email');
+      }
+      else {
+        backdrop_set_message(t("Backdrop email:<ul><li>from => @from</li><li>to => @to</li><li>subject => @subject</li></ul>@body",
+          array(
+          '@from' =>  $message['from'],
+          '@to' => $message['to'],
+          '@subject' => $message['subject'],
+          '@body' => $message['body'],
+        )));
+      }
+      break;
+
+    case 2: // Write to a /tmp file
+      $tmp_file = '/tmp/mail_intercept-' . date('Ymd-H-i') . '.txt';
+      ob_start();
+      print_r($message);
+      $content .= ob_get_clean() . "\n";
+      file_put_contents($tmp_file, $content, FILE_APPEND);
+      break;
+
+    default: // case 0, no action
   }
   $message['send'] = FALSE;
 }

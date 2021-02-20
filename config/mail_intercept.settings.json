@@ -1,0 +1,5 @@
+{
+    "_config_name": "mail_intercept.settings",
+    "mail_intercept_disable": 1,
+    "mail_intercept_handler": "1"
+}
